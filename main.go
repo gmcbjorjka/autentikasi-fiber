@@ -3,25 +3,37 @@ package main
 import (
 	"log"
 
-	"autentikasi/database"
-	"autentikasi/models"
-	"autentikasi/routes"
-
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/joho/godotenv"
+
+	"autentikasi/config"
+	"autentikasi/database"
+	"autentikasi/routes"
+	"autentikasi/utils"
 )
 
 func main() {
-	app := fiber.New()
+	_ = godotenv.Load()
 
-	// connect DB
-	database.ConnectDB()
-	if err := database.DB.AutoMigrate(&models.User{}); err != nil {
-		log.Fatal("Migration failed:", err)
+	cfg := config.Load()
+
+	if err := database.Connect(cfg); err != nil {
+		log.Fatalf("DB connect error: %v", err)
 	}
+	log.Println("✅ Database connected")
 
-	// routes
-	routes.AuthRoutes(app)
+	app := fiber.New(fiber.Config{ErrorHandler: utils.FiberErrorHandler})
+	app.Use(logger.New())
+	app.Use(cors.New())
 
-	// run server
-	log.Fatal(app.Listen(":3000"))
+	// Register routes
+	routes.SetupRoutes(app)
+
+	addr := ":" + cfg.AppPort
+	log.Printf("🚀 Auth Service running on http://localhost%v\n", addr)
+	if err := app.Listen(addr); err != nil {
+		log.Println("server stopped:", err)
+	}
 }
