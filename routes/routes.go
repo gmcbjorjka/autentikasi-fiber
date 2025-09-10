@@ -15,4 +15,6 @@ func SetupRoutes(app *fiber.App) {
 	auth.Post("/login", handlers.Login)
 
 	api.Get("/me", middleware.JWTProtected(), handlers.Me)
+	api.Get("/users/:id", middleware.JWTProtected(), handlers.GetUserProfile)
+
 }
