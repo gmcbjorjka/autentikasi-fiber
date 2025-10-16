@@ -4,6 +4,7 @@ import "os"
 
 type Config struct {
 	AppPort   string
+	AppHost   string
 	MySQLHost string
 	MySQLPort string
 	MySQLUser string
@@ -15,6 +16,7 @@ type Config struct {
 func Load() *Config {
 	return &Config{
 		AppPort:   getEnv("APP_PORT", "3000"),
+		AppHost:   getEnv("APP_HOST", "0.0.0.0"),
 		MySQLHost: getEnv("MYSQL_HOST", "127.0.0.1"),
 		MySQLPort: getEnv("MYSQL_PORT", "3306"),
 		MySQLUser: getEnv("MYSQL_USER", "root"),
