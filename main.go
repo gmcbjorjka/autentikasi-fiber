@@ -31,8 +31,8 @@ func main() {
 	// Register routes
 	routes.SetupRoutes(app)
 
-	addr := ":" + cfg.AppPort
-	log.Printf("🚀 Auth Service running on http://localhost%v\n", addr)
+	addr := cfg.AppHost + ":" + cfg.AppPort
+	log.Printf("🚀 Auth Service running on http://%s:%s\n", cfg.AppHost, cfg.AppPort)
 	if err := app.Listen(addr); err != nil {
 		log.Println("server stopped:", err)
 	}
