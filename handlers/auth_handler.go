@@ -28,14 +28,20 @@ func Register(c *fiber.Ctx) error {
 	}
 
 	hashPass, _ := utils.Hash(body.Password)
-	hashPin, _ := utils.Hash(body.Pin)
 
 	user := models.User{
 		Nama:     body.Nama,
 		Email:    body.Email,
 		Password: hashPass,
-		Pin:      hashPin,
 	}
+
+	// PIN opsional
+	if body.Pin != "" {
+		hashPin, _ := utils.Hash(body.Pin)
+		user.Pin = &hashPin
+	}
+
+	// ImgURL opsional
 	if body.ImgURL != "" {
 		user.ImgURL = &body.ImgURL
 	}

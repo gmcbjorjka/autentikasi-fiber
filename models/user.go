@@ -11,8 +11,8 @@ type User struct {
 	Nama      string         `gorm:"size:100;not null;column:nama" json:"nama"`
 	Email     string         `gorm:"size:100;not null;uniqueIndex;column:email" json:"email"`
 	Password  string         `gorm:"size:255;not null;column:password" json:"-"`
-	Pin       string         `gorm:"size:255;not null;column:pin" json:"-"`
-	ImgURL    *string        `gorm:"size:255;column:img_url" json:"img_url,omitempty"`
+	Pin       *string        `gorm:"size:255;column:pin" json:"-"`                     // opsional
+	ImgURL    *string        `gorm:"size:255;column:img_url" json:"img_url,omitempty"` // opsional
 	CreatedAt *time.Time     `gorm:"column:created_at" json:"created_at,omitempty"`
 	UpdatedAt *time.Time     `gorm:"column:updated_at" json:"updated_at,omitempty"`
 	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;index" json:"-"`
