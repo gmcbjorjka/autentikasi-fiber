@@ -26,3 +26,17 @@ From another machine on the same LAN, use the host machine's local IP (for examp
 http://192.168.1.42:3000
 
 Security note: Binding to 0.0.0.0 exposes the service on all interfaces. Only do this on trusted networks or behind a proper firewall. Use authentication/HTTPS in production environments.
+
+## Dev seeding (optional)
+
+For development convenience there's an optional seeder that will create a developer user and a few sample transactions.
+
+To enable it, set the environment variable before starting the service:
+
+```powershell
+# enable dev seeding (creates dev@example.com with password "password")
+$env:DEV_SEED = 'true'
+go run .
+```
+
+The seeder is safe: it won't duplicate the dev user or overwrite existing transactions for that user.

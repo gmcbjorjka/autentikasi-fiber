@@ -95,10 +95,26 @@ func Me(c *fiber.Ctx) error {
 	if !ok || user == nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "Unauthorized")
 	}
+	// calculate balance from transactions
+	var income float64
+	var expense float64
+	// sum pemasukan
+	database.DB.Raw(
+		"SELECT COALESCE(SUM(jumlah),0) FROM transactions WHERE user_id = ? AND jenis = ?",
+		user.ID, "pemasukan",
+	).Scan(&income)
+	// sum pengeluaran
+	database.DB.Raw(
+		"SELECT COALESCE(SUM(jumlah),0) FROM transactions WHERE user_id = ? AND jenis = ?",
+		user.ID, "pengeluaran",
+	).Scan(&expense)
+	balance := int64(income - expense)
+
 	return utils.Ok(c, fiber.StatusOK, fiber.Map{
-		"id":    user.ID,
-		"nama":  user.Nama,
-		"email": user.Email,
-		"img":   user.ImgURL,
+		"id":      user.ID,
+		"nama":    user.Nama,
+		"email":   user.Email,
+		"img":     user.ImgURL,
+		"balance": balance,
 	})
 }

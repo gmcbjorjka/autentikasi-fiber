@@ -24,6 +24,12 @@ func main() {
 	}
 	log.Println("✅ Database connected")
 
+	// Optional dev seeding: set DEV_SEED=true in your environment to create
+	// a developer user (dev@example.com / password) and sample transactions.
+	if err := database.SeedDev(); err != nil {
+		log.Printf("[SEED] error: %v", err)
+	}
+
 	app := fiber.New(fiber.Config{ErrorHandler: utils.FiberErrorHandler})
 	app.Use(logger.New())
 	app.Use(cors.New())
