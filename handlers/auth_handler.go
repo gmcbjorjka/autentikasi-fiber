@@ -110,11 +110,22 @@ func Me(c *fiber.Ctx) error {
 	).Scan(&expense)
 	balance := int64(income - expense)
 
+	// optional fields
+	var birthdayStr *string
+	if user.Birthday != nil {
+		s := user.Birthday.Format(time.RFC3339)
+		birthdayStr = &s
+	}
+
 	return utils.Ok(c, fiber.StatusOK, fiber.Map{
-		"id":      user.ID,
-		"nama":    user.Nama,
-		"email":   user.Email,
-		"img":     user.ImgURL,
-		"balance": balance,
+		"id":       user.ID,
+		"nama":     user.Nama,
+		"email":    user.Email,
+		"img":      user.ImgURL,
+		"balance":  balance,
+		"phone":    user.Phone,
+		"gender":   user.Gender,
+		"birthday": birthdayStr,
+		"status":   user.Status,
 	})
 }

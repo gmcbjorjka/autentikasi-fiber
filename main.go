@@ -34,6 +34,9 @@ func main() {
 	app.Use(logger.New())
 	app.Use(cors.New())
 
+	// serve uploaded files under /uploads
+	app.Static("/uploads", "./uploads")
+
 	// Register routes
 	routes.SetupRoutes(app)
 

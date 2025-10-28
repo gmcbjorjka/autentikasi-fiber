@@ -16,6 +16,8 @@ func SetupRoutes(app *fiber.App) {
 
 	api.Get("/me", middleware.JWTProtected(), handlers.Me)
 	api.Get("/users/:id", middleware.JWTProtected(), handlers.GetUserProfile)
+	api.Put("/me", middleware.JWTProtected(), handlers.UpdateMe)
+	api.Post("/me/avatar", middleware.JWTProtected(), handlers.UploadAvatar)
 
 	// Transactions
 	api.Get("/transactions", middleware.JWTProtected(), handlers.ListTransactions)
