@@ -23,4 +23,13 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/transactions", middleware.JWTProtected(), handlers.ListTransactions)
 	api.Post("/transactions", middleware.JWTProtected(), handlers.CreateTransaction)
 
+	// Friends
+	friends := api.Group("/friends", middleware.JWTProtected())
+	friends.Get("/search", handlers.SearchUserByPhone)
+	friends.Post("/request", handlers.SendFriendRequest)
+	friends.Post("/accept/:id", handlers.AcceptFriendRequest)
+	friends.Post("/reject/:id", handlers.RejectFriendRequest)
+	friends.Get("/list", handlers.ListFriends)
+	friends.Get("/pending", handlers.ListPendingRequests)
+
 }
