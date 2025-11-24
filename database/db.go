@@ -28,5 +28,36 @@ func Connect(cfg *config.Config) error {
 
 	DB = db
 	log.Println("📦 AutoMigrate complete")
+
+	// backfill phone_digits for existing users (safe operation)
+	go func() {
+		var users []models.User
+		if err := DB.Find(&users).Error; err != nil {
+			log.Printf("[DB] failed to fetch users for phone_digits backfill: %v", err)
+			return
+		}
+		for _, u := range users {
+			if u.Phone == nil || *u.Phone == "" {
+				continue
+			}
+			// compute digits-only
+			var b []rune
+			for _, r := range *u.Phone {
+				if r >= '0' && r <= '9' {
+					b = append(b, r)
+				}
+			}
+			s := string(b)
+			if s == "" {
+				continue
+			}
+			// update if different or empty
+			if u.PhoneDigits == nil || *u.PhoneDigits != s {
+				DB.Model(&u).Update("phone_digits", s)
+			}
+		}
+		log.Println("[DB] phone_digits backfill completed")
+	}()
+
 	return nil
 }

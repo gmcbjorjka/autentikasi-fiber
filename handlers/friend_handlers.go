@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 
 	"autentikasi/database"
 	"autentikasi/dto"
@@ -11,20 +13,95 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// SearchUserByPhone -> search user by phone number
+// SearchUserByPhone -> search user by phone number or name
+// Accepts ?phone=, ?name=, or auto-detects if query looks like phone
 func SearchUserByPhone(c *fiber.Ctx) error {
 	user, ok := c.Locals("user").(*models.User)
 	if !ok || user == nil {
 		return utils.Fail(c, fiber.StatusUnauthorized, "Unauthorized")
 	}
 
-	phone := c.Query("phone")
-	if phone == "" {
-		return utils.Fail(c, fiber.StatusBadRequest, "Phone number is required")
+	phone := strings.TrimSpace(c.Query("phone"))
+	name := strings.TrimSpace(c.Query("name"))
+	query := strings.TrimSpace(c.Query("q")) // generic query param
+
+	// If no explicit phone/name, use 'q' and auto-detect
+	if phone == "" && name == "" {
+		if query != "" {
+			// Auto-detect:
+			// - if query is only digits and has 5+ digits -> phone
+			// - otherwise -> name (including mixed letters+digits)
+			isOnlyDigits := true
+			digitCount := 0
+			for _, r := range query {
+				if r >= '0' && r <= '9' {
+					digitCount++
+				} else if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == ' ') {
+					isOnlyDigits = false
+					break
+				} else {
+					isOnlyDigits = false
+				}
+			}
+
+			// Only treat as phone if it's ONLY digits and has 5+
+			if isOnlyDigits && digitCount >= 5 {
+				phone = query
+			} else {
+				name = query
+			}
+		}
+	}
+
+	if phone == "" && name == "" {
+		return utils.Fail(c, fiber.StatusBadRequest, "Phone or name is required")
+	}
+
+	// Debug logging
+	if name != "" {
+		fmt.Printf("[SEARCH DEBUG] Auto-detected as NAME: '%s'\n", name)
+	}
+	if phone != "" {
+		fmt.Printf("[SEARCH DEBUG] Auto-detected as PHONE: '%s'\n", phone)
 	}
 
 	var foundUser models.User
-	if err := database.DB.Where("phone = ?", phone).First(&foundUser).Error; err != nil {
+	found := false
+
+	// Try search by phone first if provided or detected
+	if phone != "" {
+		digits := strings.Map(func(r rune) rune {
+			if r >= '0' && r <= '9' {
+				return r
+			}
+			return -1
+		}, phone)
+
+		if digits != "" {
+			variants := []string{digits}
+			if strings.HasPrefix(digits, "0") {
+				variants = append(variants, "62"+digits[1:])
+			} else if strings.HasPrefix(digits, "62") {
+				variants = append(variants, "0"+digits[2:])
+			}
+
+			// Try phone_digits column first
+			if err := database.DB.Where("phone_digits IN ?", variants).First(&foundUser).Error; err == nil {
+				found = true
+			} else if err := database.DB.Where("REPLACE(REPLACE(REPLACE(phone, '+', ''), ' ', ''), '-', '') IN ?", variants).First(&foundUser).Error; err == nil {
+				found = true
+			}
+		}
+	}
+
+	// Try search by name if provided and phone search failed/not provided
+	if !found && name != "" {
+		if err := database.DB.Where("LOWER(nama) LIKE ?", "%"+strings.ToLower(name)+"%").First(&foundUser).Error; err == nil {
+			found = true
+		}
+	}
+
+	if !found {
 		return utils.Fail(c, fiber.StatusNotFound, "User not found")
 	}
 
@@ -57,9 +134,24 @@ func SendFriendRequest(c *fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusBadRequest, "Invalid JSON body")
 	}
 
+	// normalize request phone to digits and find by phone_digits
+	rq := strings.TrimSpace(req.Phone)
+	digits := strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' {
+			return r
+		}
+		return -1
+	}, rq)
+	if digits == "" {
+		return utils.Fail(c, fiber.StatusBadRequest, "Phone number is invalid")
+	}
+
 	var friend models.User
-	if err := database.DB.Where("phone = ?", req.Phone).First(&friend).Error; err != nil {
-		return utils.Fail(c, fiber.StatusNotFound, "User not found")
+	if err := database.DB.Where("phone_digits = ?", digits).First(&friend).Error; err != nil {
+		// fallback to exact phone comparison
+		if err := database.DB.Where("phone = ?", req.Phone).First(&friend).Error; err != nil {
+			return utils.Fail(c, fiber.StatusNotFound, "User not found")
+		}
 	}
 
 	if friend.ID == user.ID {
@@ -168,11 +260,17 @@ func ListFriends(c *fiber.Ctx) error {
 		if err := database.DB.First(&friend, friendID).Error; err != nil {
 			continue
 		}
+
+		// Check debt status: is current user in debt to this friend?
+		isDebt := f.DebtUserID != nil && *f.DebtUserID == user.ID
+
 		friends = append(friends, fiber.Map{
-			"id":    friend.ID,
-			"nama":  friend.Nama,
-			"email": friend.Email,
-			"phone": friend.Phone,
+			"id":      friend.ID,
+			"nama":    friend.Nama,
+			"email":   friend.Email,
+			"phone":   friend.Phone,
+			"is_debt": isDebt,
+			"status":  f.Status,
 		})
 	}
 
@@ -225,5 +323,71 @@ func ListPendingRequests(c *fiber.Ctx) error {
 	return utils.Ok(c, fiber.StatusOK, fiber.Map{
 		"sent":     sent,
 		"received": received,
+	})
+}
+
+// DeleteFriend -> remove a friendship (soft delete)
+func DeleteFriend(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(*models.User)
+	if !ok || user == nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "Unauthorized")
+	}
+
+	friendIDStr := c.Params("id")
+	friendID, err := strconv.ParseUint(friendIDStr, 10, 64)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "Invalid friend ID")
+	}
+
+	// Find the friendship record
+	var friendship models.Friendship
+	if err := database.DB.Where("(user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)",
+		user.ID, friendID, friendID, user.ID).First(&friendship).Error; err != nil {
+		return utils.Fail(c, fiber.StatusNotFound, "Friendship not found")
+	}
+
+	// Soft delete the friendship
+	if err := database.DB.Delete(&friendship).Error; err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "Failed to delete friendship")
+	}
+
+	return utils.Ok(c, fiber.StatusOK, fiber.Map{"message": "Friend removed"})
+}
+
+// ToggleDebt -> toggle debt status for a friend
+func ToggleDebt(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(*models.User)
+	if !ok || user == nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "Unauthorized")
+	}
+
+	friendIDStr := c.Params("id")
+	friendID, err := strconv.ParseUint(friendIDStr, 10, 64)
+	if err != nil {
+		return utils.Fail(c, fiber.StatusBadRequest, "Invalid friend ID")
+	}
+
+	// Find the friendship record
+	var friendship models.Friendship
+	if err := database.DB.Where("(user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)",
+		user.ID, friendID, friendID, user.ID).First(&friendship).Error; err != nil {
+		return utils.Fail(c, fiber.StatusNotFound, "Friendship not found")
+	}
+
+	// Toggle debt: if current user is in debt, remove it; otherwise mark current user as in debt
+	if friendship.DebtUserID != nil && *friendship.DebtUserID == user.ID {
+		friendship.DebtUserID = nil
+	} else {
+		uid := user.ID
+		friendship.DebtUserID = &uid
+	}
+
+	if err := database.DB.Save(&friendship).Error; err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "Failed to update debt status")
+	}
+
+	return utils.Ok(c, fiber.StatusOK, fiber.Map{
+		"message":      "Debt status toggled",
+		"debt_user_id": friendship.DebtUserID,
 	})
 }

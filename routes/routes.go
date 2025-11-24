@@ -31,5 +31,7 @@ func SetupRoutes(app *fiber.App) {
 	friends.Post("/reject/:id", handlers.RejectFriendRequest)
 	friends.Get("/list", handlers.ListFriends)
 	friends.Get("/pending", handlers.ListPendingRequests)
+	friends.Delete("/:id", handlers.DeleteFriend)
+	friends.Post("/:id/toggle-debt", handlers.ToggleDebt)
 
 }
