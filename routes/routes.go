@@ -8,6 +8,9 @@ import (
 )
 
 func SetupRoutes(app *fiber.App) {
+	// Static files - serve uploads directory
+	app.Static("/uploads", "./uploads")
+
 	api := app.Group("/api/v1")
 
 	auth := api.Group("/auth")

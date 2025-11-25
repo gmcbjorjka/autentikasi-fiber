@@ -110,12 +110,14 @@ func UploadAvatar(c *fiber.Ctx) error {
 		return utils.Fail(c, fiber.StatusInternalServerError, "Failed to save uploaded file")
 	}
 
-	// Build a URL that the client can use. Use BaseURL() so it contains scheme+host.
-	imgURL := c.BaseURL() + "/uploads/" + fname
-	user.ImgURL = &imgURL
+	// Store only relative path in database, let client construct full URL with current IP
+	relativePath := "uploads/" + fname
+	user.ImgURL = &relativePath
 	if err := database.DB.Save(user).Error; err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "Failed to save user avatar")
 	}
 
+	// Return full URL to client for immediate use
+	imgURL := c.BaseURL() + relativePath
 	return utils.Ok(c, fiber.StatusOK, fiber.Map{"img": imgURL})
 }
