@@ -27,8 +27,10 @@ func SetupRoutes(app *fiber.App) {
 	friends := api.Group("/friends", middleware.JWTProtected())
 	friends.Get("/search", handlers.SearchUserByPhone)
 	friends.Post("/request", handlers.SendFriendRequest)
-	friends.Post("/accept/:id", handlers.AcceptFriendRequest)
-	friends.Post("/reject/:id", handlers.RejectFriendRequest)
+	friends.Post("/accept", handlers.AcceptFriendRequestByPhone) // Accept with phone in body
+	friends.Post("/reject", handlers.RejectFriendRequestByPhone) // Reject with phone in body
+	friends.Post("/accept/:id", handlers.AcceptFriendRequest)    // Legacy: by ID
+	friends.Post("/reject/:id", handlers.RejectFriendRequest)    // Legacy: by ID
 	friends.Get("/list", handlers.ListFriends)
 	friends.Get("/pending", handlers.ListPendingRequests)
 	friends.Delete("/:id", handlers.DeleteFriend)
