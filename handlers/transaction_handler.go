@@ -17,7 +17,6 @@ func CreateTransaction(c *fiber.Ctx) error {
 
 	var body struct {
 		Jenis      string  `json:"jenis"`
-		Kategori   string  `json:"kategori"`
 		Jumlah     float64 `json:"jumlah"`
 		Metode     string  `json:"metode"`
 		Keterangan string  `json:"keterangan"`
@@ -29,7 +28,6 @@ func CreateTransaction(c *fiber.Ctx) error {
 	tx := models.Transaction{
 		UserID:     user.ID,
 		Jenis:      body.Jenis,
-		Kategori:   body.Kategori,
 		Jumlah:     body.Jumlah,
 		Metode:     body.Metode,
 		Keterangan: body.Keterangan,
