@@ -73,6 +73,7 @@ func ForgotPassword(c *fiber.Ctx) error {
 	// Send OTP email
 	if err := utils.SendOTPEmail(cfg, req.Email, otp); err != nil {
 		log.Printf("[ForgotPassword] Failed to send email: %v", err)
+		log.Printf("[ForgotPassword] SMTP Config - Server: %s, Port: %s, Username: %s", cfg.MailServer, cfg.MailPort, cfg.MailUsername)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "500",
 			"message": "Failed to send OTP email",

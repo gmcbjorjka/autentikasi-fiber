@@ -1,6 +1,84 @@
 # SMTP Configuration Guide untuk Password Reset Feature
 
+## Quick Test
+
+Untuk test apakah SMTP sudah benar, jalankan:
+
+```bash
+curl http://localhost:3000/api/v1/auth/test-smtp
+```
+
+**Response jika berhasil:**
+
+```json
+{
+  "code": "200",
+  "message": "SMTP connection successful!",
+  "success": true
+}
+```
+
+**Response jika gagal:**
+
+```json
+{
+  "code": "500",
+  "message": "SMTP connection failed: 535 5.7.8 Username and Password not accepted",
+  "success": false,
+  "debug": {
+    "server": "smtp.gmail.com",
+    "port": "587",
+    "username": "smt6capstone@gmail.com",
+    "error": "535 5.7.8 Username and Password not accepted..."
+  }
+}
+```
+
+---
+
 ## Troubleshooting Gmail SMTP Issues
+
+### Error: "535 5.7.8 Username and Password not accepted"
+
+**PALING SERING**: Gmail App Password salah atau belum di-generate dengan benar.
+
+#### Fix: Generate Gmail App Password
+
+**Prerequisites:**
+
+- Sudah punya Google Account
+- 2-Factor Authentication WAJIB sudah enabled
+
+**Langkah:**
+
+1. **Enable 2-Factor Authentication (jika belum):**
+
+   - Buka: https://myaccount.google.com/security
+   - Scroll ke "How you sign in to Google"
+   - Click "2-Step Verification"
+   - Follow instructions
+
+2. **Generate App Password:**
+
+   - Buka: https://myaccount.google.com/apppasswords
+   - Select "Mail" and "Windows Computer" (atau device kamu)
+   - Google akan generate password **16 character dengan spasi**
+   - **JANGAN COPY KE NOTEPAD DULU** - copy langsung dari screen ke `.env`
+
+3. **Update `.env` dengan password yang tepat:**
+
+   ```dotenv
+   MAIL_PASSWORD=abcd efgh ijkl mnop
+   ```
+
+   **Perhatian:** Ada spasi 4 kali di antara 4 kelompok 4 karakter
+
+4. **Test SMTP:**
+   ```bash
+   curl http://localhost:3000/api/v1/auth/test-smtp
+   ```
+
+---
 
 ### Error: "421 service not available (connection refused, too many connections)"
 
