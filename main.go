@@ -34,12 +34,6 @@ func main() {
 	app.Use(logger.New())
 	app.Use(cors.New())
 
-	// Middleware to pass config to all handlers
-	app.Use(func(c *fiber.Ctx) error {
-		c.Locals("config", cfg)
-		return c.Next()
-	})
-
 	// serve uploaded files under /uploads
 	app.Static("/uploads", "./uploads")
 
