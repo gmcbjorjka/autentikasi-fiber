@@ -11,6 +11,14 @@ type Config struct {
 	MySQLPass string
 	MySQLDB   string
 	JWTSecret string
+
+	// SMTP Settings
+	MailServer        string
+	MailPort          string
+	MailUseTLS        string
+	MailUsername      string
+	MailPassword      string
+	MailDefaultSender string
 }
 
 func Load() *Config {
@@ -23,6 +31,14 @@ func Load() *Config {
 		MySQLPass: getEnv("MYSQL_PASS", ""),
 		MySQLDB:   getEnv("MYSQL_DB", "test"),
 		JWTSecret: getEnv("JWT_SECRET", "changeme"),
+
+		// SMTP Settings
+		MailServer:        getEnv("MAIL_SERVER", "smtp.gmail.com"),
+		MailPort:          getEnv("MAIL_PORT", "587"),
+		MailUseTLS:        getEnv("MAIL_USE_TLS", "true"),
+		MailUsername:      getEnv("MAIL_USERNAME", ""),
+		MailPassword:      getEnv("MAIL_PASSWORD", ""),
+		MailDefaultSender: getEnv("MAIL_DEFAULT_SENDER", ""),
 	}
 }
 

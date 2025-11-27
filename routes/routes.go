@@ -16,6 +16,9 @@ func SetupRoutes(app *fiber.App) {
 	auth := api.Group("/auth")
 	auth.Post("/register", handlers.Register)
 	auth.Post("/login", handlers.Login)
+	auth.Post("/forgot-password", handlers.ForgotPassword)
+	auth.Post("/verify-otp", handlers.VerifyOTP)
+	auth.Post("/reset-password", handlers.ResetPassword)
 
 	api.Get("/me", middleware.JWTProtected(), handlers.Me)
 	api.Get("/users/:id", middleware.JWTProtected(), handlers.GetUserProfile)
