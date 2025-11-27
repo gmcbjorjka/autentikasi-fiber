@@ -51,8 +51,8 @@ func SendOTPEmail(cfg *config.Config, recipientEmail, otp string) error {
 
 	port, _ := strconv.Atoi(cfg.MailPort)
 	d := mail.NewDialer(cfg.MailServer, port, cfg.MailUsername, cfg.MailPassword)
-	// Configure TLS
-	d.TLSConfig = &tls.Config{InsecureSkipVerify: false}
+	// Configure TLS with ServerName
+	d.TLSConfig = &tls.Config{ServerName: cfg.MailServer}
 
 	if err := d.DialAndSend(m); err != nil {
 		return fmt.Errorf("failed to send OTP email: %w", err)
@@ -90,8 +90,8 @@ func SendPasswordResetSuccessEmail(cfg *config.Config, recipientEmail string) er
 
 	port, _ := strconv.Atoi(cfg.MailPort)
 	d := mail.NewDialer(cfg.MailServer, port, cfg.MailUsername, cfg.MailPassword)
-	// Configure TLS
-	d.TLSConfig = &tls.Config{InsecureSkipVerify: false}
+	// Configure TLS with ServerName
+	d.TLSConfig = &tls.Config{ServerName: cfg.MailServer}
 
 	if err := d.DialAndSend(m); err != nil {
 		return fmt.Errorf("failed to send confirmation email: %w", err)
