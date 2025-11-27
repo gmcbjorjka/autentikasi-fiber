@@ -3,13 +3,20 @@ package routes
 import (
 	"github.com/gofiber/fiber/v2"
 
+	"autentikasi/config"
 	"autentikasi/handlers"
 	"autentikasi/middleware"
 )
 
-func SetupRoutes(app *fiber.App) {
+func SetupRoutes(app *fiber.App, cfg *config.Config) {
 	// Static files - serve uploads directory
 	app.Static("/uploads", "./uploads")
+
+	// Attach config to each request context so handlers can access it via c.Locals("config").
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("config", cfg)
+		return c.Next()
+	})
 
 	api := app.Group("/api/v1")
 

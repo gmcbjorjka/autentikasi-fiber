@@ -70,16 +70,16 @@ func ForgotPassword(c *fiber.Ctx) error {
 		})
 	}
 
-	// Send OTP email
-	if err := utils.SendOTPEmail(cfg, req.Email, otp); err != nil {
-		log.Printf("[ForgotPassword] Failed to send email: %v", err)
-		log.Printf("[ForgotPassword] SMTP Config - Server: %s, Port: %s, Username: %s", cfg.MailServer, cfg.MailPort, cfg.MailUsername)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"code":    "500",
-			"message": "Failed to send OTP email",
-			"success": false,
-		})
-	}
+	// Send OTP email asynchronously to avoid blocking the HTTP request.
+	// The OTP record is already persisted; failures to send email are logged but won't block the API response.
+	go func(cfg *config.Config, email, otp string) {
+		if err := utils.SendOTPEmail(cfg, email, otp); err != nil {
+			log.Printf("[ForgotPassword] Failed to send email (async): %v", err)
+			log.Printf("[ForgotPassword] SMTP Config - Server: %s, Port: %s, Username: %s", cfg.MailServer, cfg.MailPort, cfg.MailUsername)
+		} else {
+			log.Printf("[ForgotPassword] OTP email sent (async) to %s", email)
+		}
+	}(cfg, req.Email, otp)
 
 	log.Printf("[ForgotPassword] OTP sent to %s", req.Email)
 
