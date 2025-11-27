@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"crypto/tls"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -50,10 +51,11 @@ func SendOTPEmail(cfg *config.Config, recipientEmail, otp string) error {
 
 	port, _ := strconv.Atoi(cfg.MailPort)
 	d := mail.NewDialer(cfg.MailServer, port, cfg.MailUsername, cfg.MailPassword)
-	d.TLSConfig = nil // Let the dialer handle TLS
+	// Configure TLS
+	d.TLSConfig = &tls.Config{InsecureSkipVerify: false}
 
 	if err := d.DialAndSend(m); err != nil {
-		return err
+		return fmt.Errorf("failed to send OTP email: %w", err)
 	}
 	return nil
 }
@@ -88,10 +90,11 @@ func SendPasswordResetSuccessEmail(cfg *config.Config, recipientEmail string) er
 
 	port, _ := strconv.Atoi(cfg.MailPort)
 	d := mail.NewDialer(cfg.MailServer, port, cfg.MailUsername, cfg.MailPassword)
-	d.TLSConfig = nil
+	// Configure TLS
+	d.TLSConfig = &tls.Config{InsecureSkipVerify: false}
 
 	if err := d.DialAndSend(m); err != nil {
-		return err
+		return fmt.Errorf("failed to send confirmation email: %w", err)
 	}
 	return nil
 }
