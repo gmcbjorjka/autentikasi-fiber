@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"time"
 
 	"autentikasi/config"
 
@@ -51,8 +52,10 @@ func SendOTPEmail(cfg *config.Config, recipientEmail, otp string) error {
 
 	port, _ := strconv.Atoi(cfg.MailPort)
 	d := mail.NewDialer(cfg.MailServer, port, cfg.MailUsername, cfg.MailPassword)
-	// Configure TLS with ServerName
+
+	// Configure TLS with ServerName and timeout
 	d.TLSConfig = &tls.Config{ServerName: cfg.MailServer}
+	d.Timeout = 10 * time.Second
 
 	if err := d.DialAndSend(m); err != nil {
 		return fmt.Errorf("failed to send OTP email: %w", err)
@@ -90,8 +93,10 @@ func SendPasswordResetSuccessEmail(cfg *config.Config, recipientEmail string) er
 
 	port, _ := strconv.Atoi(cfg.MailPort)
 	d := mail.NewDialer(cfg.MailServer, port, cfg.MailUsername, cfg.MailPassword)
-	// Configure TLS with ServerName
+
+	// Configure TLS with ServerName and timeout
 	d.TLSConfig = &tls.Config{ServerName: cfg.MailServer}
+	d.Timeout = 10 * time.Second
 
 	if err := d.DialAndSend(m); err != nil {
 		return fmt.Errorf("failed to send confirmation email: %w", err)
