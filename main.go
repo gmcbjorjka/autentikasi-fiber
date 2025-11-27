@@ -37,8 +37,8 @@ func main() {
 	// serve uploaded files under /uploads
 	app.Static("/uploads", "./uploads")
 
-	// Register routes
-	routes.SetupRoutes(app)
+	// Register routes (pass config so handlers can access via c.Locals("config"))
+	routes.SetupRoutes(app, cfg)
 
 	addr := cfg.AppHost + ":" + cfg.AppPort
 	log.Printf("🚀 Auth Service running on http://%s:%s\n", cfg.AppHost, cfg.AppPort)
