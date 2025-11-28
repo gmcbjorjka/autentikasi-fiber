@@ -53,7 +53,6 @@ func SeedDev() error {
 		{
 			UserID:     u.ID,
 			Jenis:      "pemasukan",
-			Kategori:   "Gaji",
 			Jumlah:     4500000,
 			Metode:     "Transfer",
 			Keterangan: "Gaji Bulanan",
@@ -62,7 +61,6 @@ func SeedDev() error {
 		{
 			UserID:     u.ID,
 			Jenis:      "pengeluaran",
-			Kategori:   "Makan malam",
 			Jumlah:     20000,
 			Metode:     "Tunai",
 			Keterangan: "Makan Soto",
@@ -71,7 +69,6 @@ func SeedDev() error {
 		{
 			UserID:     u.ID,
 			Jenis:      "pengeluaran",
-			Kategori:   "Transport",
 			Jumlah:     12000,
 			Metode:     "Tunai",
 			Keterangan: "BBM motor",

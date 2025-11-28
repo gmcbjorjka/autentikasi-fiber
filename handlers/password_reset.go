@@ -249,6 +249,20 @@ func ResetPassword(c *fiber.Ctx) error {
 
 	log.Printf("[ResetPassword] Password reset successfully for %s", req.Email)
 
+	// Record password change in account history
+	go func(u models.User, email string) {
+		now := time.Now()
+		ah := models.AccountHistory{
+			UserID:      u.ID,
+			Event:       "password_change",
+			Description: "Password changed via reset",
+			CreatedAt:   &now,
+		}
+		if err := database.DB.Create(&ah).Error; err != nil {
+			log.Printf("[AccountHistory] failed to record password_change: %v", err)
+		}
+	}(user, req.Email)
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"code":    "200",
 		"message": "Password reset successfully",

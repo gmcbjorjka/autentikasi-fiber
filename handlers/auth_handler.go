@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"strings"
 	"time"
 
@@ -21,10 +22,24 @@ func Register(c *fiber.Ctx) error {
 	}
 	body.Email = strings.TrimSpace(strings.ToLower(body.Email))
 
+	// Basic validation
+	if body.Nama == "" {
+		return utils.Fail(c, fiber.StatusBadRequest, "Nama pengguna wajib diisi")
+	}
+	if body.Email == "" {
+		return utils.Fail(c, fiber.StatusBadRequest, "E-mail wajib diisi")
+	}
+	if !strings.Contains(body.Email, "@") || !strings.Contains(body.Email, ".") {
+		return utils.Fail(c, fiber.StatusBadRequest, "Format e-mail tidak valid")
+	}
+	if len(body.Password) < 6 {
+		return utils.Fail(c, fiber.StatusBadRequest, "Kata sandi minimal 6 karakter")
+	}
+
 	var exists int64
 	database.DB.Model(&models.User{}).Where("email = ?", body.Email).Count(&exists)
 	if exists > 0 {
-		return utils.Fail(c, fiber.StatusConflict, "Email already registered")
+		return utils.Fail(c, fiber.StatusConflict, "E-mail sudah terdaftar")
 	}
 
 	hashPass, _ := utils.Hash(body.Password)
@@ -47,7 +62,7 @@ func Register(c *fiber.Ctx) error {
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
-		return utils.Fail(c, fiber.StatusInternalServerError, "Failed to create user")
+		return utils.Fail(c, fiber.StatusInternalServerError, "Gagal membuat pengguna")
 	}
 
 	return utils.Ok(c, fiber.StatusCreated, fiber.Map{
@@ -65,12 +80,20 @@ func Login(c *fiber.Ctx) error {
 	}
 	email := strings.TrimSpace(strings.ToLower(body.Email))
 
+	// Basic validation
+	if email == "" {
+		return utils.Fail(c, fiber.StatusBadRequest, "E-mail wajib diisi")
+	}
+	if body.Password == "" {
+		return utils.Fail(c, fiber.StatusBadRequest, "Kata sandi wajib diisi")
+	}
+
 	var user models.User
 	if err := database.DB.Where("email = ?", email).First(&user).Error; err != nil {
-		return utils.Fail(c, fiber.StatusNotFound, "Failed, User not registered")
+		return utils.Fail(c, fiber.StatusNotFound, "E-mail kamu tidak ditemukan")
 	}
 	if ok := utils.Check(body.Password, user.Password); !ok {
-		return utils.Fail(c, fiber.StatusUnauthorized, "Invalid credentials")
+		return utils.Fail(c, fiber.StatusUnauthorized, "Kata sandi kamu salah")
 	}
 
 	cfg := config.Load()
@@ -84,6 +107,21 @@ func Login(c *fiber.Ctx) error {
 	if err != nil {
 		return utils.Fail(c, fiber.StatusInternalServerError, "Failed to sign token")
 	}
+
+	// Record login event
+	go func(u models.User) {
+		now := time.Now()
+		ah := models.AccountHistory{
+			UserID:      u.ID,
+			Event:       "login",
+			Description: "User logged in",
+			CreatedAt:   &now,
+		}
+		if err := database.DB.Create(&ah).Error; err != nil {
+			// log but don't fail
+			log.Printf("[AccountHistory] failed to record login: %v", err)
+		}
+	}(user)
 
 	return utils.Ok(c, fiber.StatusOK, fiber.Map{
 		"token": token,
@@ -128,4 +166,36 @@ func Me(c *fiber.Ctx) error {
 		"birthday": birthdayStr,
 		"status":   user.Status,
 	})
+}
+
+// Logout - record logout event (token should be discarded client-side)
+func Logout(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(*models.User)
+	if !ok || user == nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "Unauthorized")
+	}
+	now := time.Now()
+	ah := models.AccountHistory{
+		UserID:      user.ID,
+		Event:       "logout",
+		Description: "User logged out",
+		CreatedAt:   &now,
+	}
+	if err := database.DB.Create(&ah).Error; err != nil {
+		log.Printf("[AccountHistory] failed to record logout: %v", err)
+	}
+	return utils.Ok(c, fiber.StatusOK, fiber.Map{"message": "Logged out"})
+}
+
+// GetAuthHistory - return recent account events for current user
+func GetAuthHistory(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(*models.User)
+	if !ok || user == nil {
+		return utils.Fail(c, fiber.StatusUnauthorized, "Unauthorized")
+	}
+	var items []models.AccountHistory
+	if err := database.DB.Where("user_id = ?", user.ID).Order("created_at desc").Find(&items).Error; err != nil {
+		return utils.Fail(c, fiber.StatusInternalServerError, "Failed to fetch history")
+	}
+	return utils.Ok(c, fiber.StatusOK, fiber.Map{"events": items})
 }
